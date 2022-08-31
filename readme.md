@@ -21,6 +21,9 @@ kubelet 종료
 kube scale
 > kubectl scale deployment [deploy name] --replicas=[i]
 
+pods 접속하기
+> kubectl exec [deploy name] -it -- /bin/bash
+
 # 쿠버네티스는 어떻게 구성되어 있을까?
 
 - api
@@ -216,3 +219,119 @@ API 서버에 연결이 되지않는다는 오류가 출력됩니다.
 이렇게 되면 통신을 하고있던 것들까지 모두 문제가 생기게 됩니다.  
 `따라서 마스터 노드에 있는 컨테이너 런타임은 가장 중요한 요소입니다.`  
 API 서버를 핸들링 하는 서버이기 때문입니다.
+
+현업에서는 멀티 마스터 여러개를 두고 사용합니다.
+
+# 쿠버네티스 오브젝트
+
+오브젝트는 추구하는 상태를 기술해 둔 것  
+직접 확인하려면 아래 명령어를 사용하여 확인
+
+> kubectl edit deployment del-deploy
+
+추구하는 상태는 아래와 같습니다.
+
+~~~
+spec:
+  ...
+    replicas: 9
+    ...
+~~~
+
+현재 상태는 아래와 같습니다.
+
+~~~
+status:
+  ...
+    replicas: 9
+    ...
+~~~
+
+둘의 값이 동일합니다. 추구하는 값과 현재값이 동일하기 때문입니다.
+
+# 쿠버네티스 기본 오브젝트
+
+볼륨 : 영속적인 데이터를 보존하기 위해서 존재합니다.
+
+# kubectl 쉡게 쓰는 법
+
+배시 자동 완성 (bash-completion)  
+사용하고 있는 shell 의 BASH SHELL 은 일부 설정을 가져오는 곳이 
+`~/.bashrc` 이며 이것은 `/etc/bash_completion.d/kubectl` 을 불러오게 Vagrant 를 통해서  
+이미 설정되어 있습니다. 이를 통해서 `kubectl 이 단순이 k 를 입력하면 실행될 수 있도록 구현`되어 있습니다.  
+
+## 배시 셸에 별명(Alias) 지어 주기
+
+ex) alias k = kubectl
+ex) alias ka = kubectl apply -f
+ex) alias keq = kubectl exec ...
+
+예시 파일 경로 ch6/6.1/k8s_rc.sh
+
+# 쿠버네티스 버전 업그레이드
+
+- 일반적인 업그레이드 순서  
+  - 업그레이드 계획 수립
+  - kubeadm 를 사용해서 업그레이드 (다시시작)
+  - kubelet 업그레이드 (다시시작)
+  - 업그레이드 완료 확인
+
+> kubeadm upgrade plan
+
+제공하는 kubeadm 을 확인해보자
+> yum list kubeadm -- showduplicates
+
+현재의 환경에서 kubeadm 을 설치하고 어디까지 올릴 수 있는지 알 수 있습니다.  
+
+> kubeadm upgrade apply 1.20.4
+
+을 실행하면 실패합니다.  
+kubeadm 버전이 낮기 때문입니다.
+
+> yum upgrade -y kubeadm-1.20.4
+
+kubeadm 버전 자체를 높여줘야 합니다.  
+
+> k get nodes
+
+목록을 확인해보면 업그레이드 확인이 되지 않습니다.  
+업그레이드 한 kubeadm 의 버전을 확인해봅니다.
+
+> kubeadm version
+
+결과는 최신버전으로 보입니다.  
+
+> kubelet --version
+
+확인해보면 kubelet 버전이 올라가지 않을것을 확인할 수 있습니다.  
+
+> yum upgrade kubelet-1.20.4 -y
+
+kubelet 자체를 최신 버전으로 업그레이드 합니다.  
+이제 다시 시작해줍니다.  
+
+> systemctl restart kubelet
+> systemctl daemon-reload
+
+지금까지 마스터 노드 업그레이드 였으며 다음 워크 노드의 버전을 업그레이드 해보겠습니다.  
+
+워크 노드에서는 kubeadm 을 통해서 업그레이드 할 필요 없습니다.  
+kubelet 만 업그레이드 해주며 다시 시작해주면 됩니다.  
+
+# 오브젝트에는 예약 단축어가 있다
+
+- 파드 예약 단축어
+  - pod
+  - pods
+  - po
+- 디플로이먼트 예약 단축어
+  - deployment
+  - deployments
+  - deploy
+- nodes
+  - no
+- namespaces
+  - ns
+- services
+  - svc
+
